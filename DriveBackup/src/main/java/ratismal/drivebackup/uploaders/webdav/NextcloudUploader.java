@@ -72,22 +72,25 @@ public class NextcloudUploader extends WebDAVUploader {
             long pos = 0;
             
             try (FileInputStream fis = new FileInputStream(file)) {
+                byte[] buff = new byte[chunksize];
                 while (pos < size) {
                     int this_size = (int)Long.min(size - pos, chunksize);
-                    byte[] buff = new byte[chunksize];
                     int read_bytes = fis.read(buff, 0, this_size);
 
-                    // Avoid zero padding
-                    if (read_bytes < size) {
-                        buff = Arrays.copyOf(buff, read_bytes);
-                    }
                     SardineException ex = null;
                     for (int i=0; i<10; i++) {
                         try {
                             if (ex != null) {
                                 logger.log("Error uploading fragment, retrying: " + ex.getMessage());
                             }
-                            sardine.put(tempdir + String.format("/%020d-%020d", pos, pos+read_bytes-1), buff);
+                            // Avoid zero padding
+                            if (read_bytes < size) {
+                                byte[] short_buff = Arrays.copyOf(buff, read_bytes);
+                                sardine.put(tempdir + String.format("/%020d-%020d", pos, pos+read_bytes-1), short_buff);
+                                short_buff = null;
+                            } else {
+                                sardine.put(tempdir + String.format("/%020d-%020d", pos, pos+read_bytes-1), buff);
+                            }
                             ex = null;
                             break;
                         } catch (SardineException e) {
@@ -102,6 +105,9 @@ public class NextcloudUploader extends WebDAVUploader {
                     }
                     pos += read_bytes;
                 }
+
+                buff = null;
+
                 try {
                     sardine.move(tempdir + "/.file", target.toString());
                 } catch (SardineException e) {
