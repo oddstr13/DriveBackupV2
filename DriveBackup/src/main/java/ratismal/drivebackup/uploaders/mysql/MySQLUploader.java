@@ -250,7 +250,7 @@ public class MySQLUploader {
                             // WARNING: Can cause excessive memory usage!
                             sql.append("FROM_BASE64('");
                             sql.append(Base64.getEncoder().encodeToString(rs.getBytes(columnIndex)));
-                            sql.append("'");
+                            sql.append("')");
                             break;
 
                         default:
